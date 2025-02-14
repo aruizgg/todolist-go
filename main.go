@@ -53,7 +53,7 @@ func main() {
 			fmt.Println("Debes especificar un ID de tarea con -id")
 			os.Exit(1)
 		}
-		fmt.Println("Tarea completada con ID:", *completeTaskID)
+		completeTask(*completeTaskID)
 	case "delete":
 		deleteTaskID := deleteCmd.Int("id", -1, "ID de la tarea a eliminar")
 		deleteCmd.Parse(os.Args[2:])
@@ -148,4 +148,82 @@ func showTaskList() {
 			fmt.Printf("%d. %s - %s\n", task.ID, task.Name, status)
 		}
 	}
+}
+
+// Marca una tarea como completada en base a su id
+func completeTask(taskID int) {
+	// Abrir el archivo CSV original
+	inputFile, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("Error al abrir el archivo csv:", err)
+		return
+	}
+	defer inputFile.Close()
+
+	// Crear un archivo temporal para escribir los cambios
+	outputFile, err := os.Create("tasks_temp.csv")
+	if err != nil {
+		fmt.Println("Error al crear el archivo temporal:", err)
+		return
+	}
+	defer outputFile.Close()
+
+	// Crear un lector y un escritor CSV
+	reader := csv.NewReader(inputFile)
+	writer := csv.NewWriter(outputFile)
+	defer writer.Flush()
+
+	// Definir los parámetros de búsqueda y modificación
+	nuevoValor := true
+	columnaABuscar := 0    // Índice de la columna donde buscar el elemento x
+	columnaAModificar := 2 // Índice de la columna a modificar
+	found := false
+
+	// Leer y procesar el archivo línea por línea
+	for {
+		record, err := reader.Read()
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			fmt.Println("Error al leer una línea:", err)
+			return
+		}
+
+		// Modificar el registro si se encuentra el elemento x
+		if record[columnaABuscar] == strconv.Itoa(taskID) {
+			found = true
+			if record[columnaAModificar] == "false" {
+				record[columnaAModificar] = strconv.FormatBool(nuevoValor)
+				fmt.Printf("La tarea %s con id %d ha sido completada\n", record[1], taskID)
+			} else {
+				fmt.Printf("La tarea %s con id %d ya se encuentra completada\n", record[1], taskID)
+			}
+
+		}
+
+		// Escribir el registro (modificado o no) en el archivo temporal
+		if err := writer.Write(record); err != nil {
+			fmt.Println("Error al escribir una línea:", err)
+			return
+		}
+	}
+
+	// Asegurar que todos los datos se escriban en el archivo
+	writer.Flush()
+
+	// Cerrar ambos archivos
+	inputFile.Close()
+	outputFile.Close()
+
+	// Reemplazar el archivo original con el archivo temporal
+	if err := os.Rename("tasks_temp.csv", filePath); err != nil {
+		fmt.Println("Error al reemplazar el archivo original:", err)
+		return
+	}
+
+	if !found {
+		fmt.Printf("La tarea con id %d no existe\n", taskID)
+	}
+
 }
