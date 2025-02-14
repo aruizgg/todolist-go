@@ -45,7 +45,7 @@ func main() {
 		addNewTask(*addTask)
 	case "list":
 		listCmd.Parse(os.Args[2:])
-		fmt.Println("Mostrando todas las tareas...")
+		showTaskList()
 	case "complete":
 		completeTaskID := completeCmd.Int("id", -1, "ID de la tarea a marcar como completada")
 		completeCmd.Parse(os.Args[2:])
@@ -128,5 +128,24 @@ func saveTasks(tasks []Task) {
 			task.Name,
 			strconv.FormatBool(task.Completed),
 		})
+	}
+}
+
+// Muestra la lista de tareas guardada
+func showTaskList() {
+	tasks := loadTasks()
+
+	if len(tasks) == 0 {
+		fmt.Println("No existe ninguna tarea")
+	} else {
+		for _, task := range tasks {
+			var status string
+			if task.Completed {
+				status = "Completado"
+			} else {
+				status = "Pendiente"
+			}
+			fmt.Printf("%d. %s - %s\n", task.ID, task.Name, status)
+		}
 	}
 }
