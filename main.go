@@ -73,8 +73,29 @@ func main() {
 func addNewTask(taskName string) {
 	tasks := loadTasks()
 
-	// Crear una nueva tarea con ID autoincremental
-	newID := len(tasks) + 1
+	// Asignación del primer ID disponible
+	maxID := 0
+	usedIDs := make(map[int]bool, len(tasks))
+
+	for _, task := range tasks {
+		usedIDs[task.ID] = true
+		if task.ID > maxID {
+			maxID = task.ID
+		}
+	}
+
+	newID := 1
+	for newID <= maxID {
+		if !usedIDs[newID] {
+			break
+		}
+		newID++
+	}
+
+	if newID > maxID {
+		newID = maxID + 1
+	}
+
 	newTask := Task{ID: newID, Name: taskName, Completed: false}
 
 	// Guardar la nueva tarea en el archivo
