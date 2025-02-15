@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/eiannone/keyboard"
 	"github.com/inancgumus/screen"
 )
@@ -22,6 +23,20 @@ type Task struct {
 	Completed bool
 }
 
+var colorInit = lipgloss.Color("#00e4ff")
+
+var initStyle = lipgloss.NewStyle().Align().
+	Bold(true).
+	Italic(true).
+	Foreground(colorInit).
+	Padding(1, 3).
+	Margin(1).
+	Align(lipgloss.Center)
+var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+var optionSelectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#38d1e3"))
+var optionNotSelectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
+var placeHolderStyle = lipgloss.NewStyle().Italic(true)
+
 func main() {
 
 	options := []string{"Agregar tarea", "Listar tareas", "Completar tarea", "Eliminar tarea", "Salir"}
@@ -32,13 +47,20 @@ func main() {
 		screen.Clear()
 		screen.MoveTopLeft()
 
+		fmt.Print(initStyle.Render("T0D0List"), placeHolderStyle.Render("by aruizgg"))
+		fmt.Println()
+
 		// Mostrar el menú
-		fmt.Println("\nSeleccione una opción:")
+		fmt.Println(helpStyle.Render("\nSeleccione una opción:"))
 		for i, option := range options {
 			if i == selectedIndex {
-				fmt.Printf("> %s\n", option)
+				fmt.Printf(optionSelectedStyle.Render("> %s"), option)
+				fmt.Println()
+
 			} else {
-				fmt.Printf("  %s\n", option)
+				fmt.Printf(optionNotSelectedStyle.Render("%s"), option)
+				fmt.Println()
+
 			}
 		}
 
@@ -68,13 +90,11 @@ func main() {
 			case 3:
 				handleDeleteCommand()
 			case 4:
-				fmt.Println("¡Hasta luego!")
 				return
 			}
 			fmt.Println("\nPresione cualquier tecla para volver al menú...")
 			keyboard.GetSingleKey()
 		case keyboard.KeyEsc:
-			fmt.Println("¡Hasta luego!")
 			return
 		}
 	}
@@ -124,9 +144,11 @@ func selectTask() int {
 				status = "Pendiente"
 			}
 			if i == selectedIndex {
-				fmt.Printf("> %d. %s - %s\n", task.ID, task.Name, status)
+				fmt.Printf(optionSelectedStyle.Render("> %d. %s - %s\n"), task.ID, task.Name, status)
+				fmt.Println()
 			} else {
-				fmt.Printf(" %d. %s - %s\n", task.ID, task.Name, status)
+				fmt.Printf(optionNotSelectedStyle.Render("%d. %s - %s\n"), task.ID, task.Name, status)
+				fmt.Println()
 			}
 		}
 
