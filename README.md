@@ -1,9 +1,6 @@
-# T0D0List
+# TodoList
 
 Una aplicación CLI de gestión de tareas desarrollada en Go.
-
-## Descripción
-T0D0List es una aplicación de línea de comandos para gestionar tareas, desarrollada en Go. Ofrece una interfaz de usuario intuitiva y atractiva gracias al uso de la biblioteca `lipgloss` para el estilizado de la consola.
 
 ## Características
 - Agregar nuevas tareas
