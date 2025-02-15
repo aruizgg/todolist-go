@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/eiannone/keyboard"
+	"github.com/inancgumus/screen"
 )
 
 // Ruta del archivo CSV donde se almacenan las tareas
@@ -20,52 +24,137 @@ type Task struct {
 
 func main() {
 
-	// Comprueba el número de argumentos
-	if len(os.Args) < 2 {
-		fmt.Println("Uso: go run main.go <comando> [opciones]")
-		fmt.Println("Comandos disponibles: add, list, complete, delete")
-		os.Exit(1)
+	options := []string{"Agregar tarea", "Listar tareas", "Completar tarea", "Eliminar tarea", "Salir"}
+	selectedIndex := 0
+
+	for {
+		// Limpiar la pantalla
+		screen.Clear()
+		screen.MoveTopLeft()
+
+		// Mostrar el menú
+		fmt.Println("\nSeleccione una opción:")
+		for i, option := range options {
+			if i == selectedIndex {
+				fmt.Printf("> %s\n", option)
+			} else {
+				fmt.Printf("  %s\n", option)
+			}
+		}
+
+		// Capturar la tecla presionada
+		_, key, err := keyboard.GetSingleKey()
+		if err != nil {
+			panic(err)
+		}
+
+		// Manejar la navegación
+		switch key {
+		case keyboard.KeyArrowUp:
+			selectedIndex = (selectedIndex - 1 + len(options)) % len(options)
+		case keyboard.KeyArrowDown:
+			selectedIndex = (selectedIndex + 1) % len(options)
+		case keyboard.KeyEnter:
+			// Ejecutar la acción seleccionada
+			screen.Clear()
+			screen.MoveTopLeft()
+			switch selectedIndex {
+			case 0:
+				handleAddCommand()
+			case 1:
+				showTaskList()
+			case 2:
+				handleCompleteCommand()
+			case 3:
+				handleDeleteCommand()
+			case 4:
+				fmt.Println("¡Hasta luego!")
+				return
+			}
+			fmt.Println("\nPresione cualquier tecla para volver al menú...")
+			keyboard.GetSingleKey()
+		case keyboard.KeyEsc:
+			fmt.Println("¡Hasta luego!")
+			return
+		}
 	}
+}
 
-	// Definir los comandos disponibles
-	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
-	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
-	completeCmd := flag.NewFlagSet("complete", flag.ExitOnError)
-	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
+func handleAddCommand() {
+	fmt.Println("Ingrese el nombre de la tarea:")
+	reader := bufio.NewReader(os.Stdin)
+	task, _ := reader.ReadString('\n')
+	task = strings.TrimSpace(task)
+	if task != "" {
+		addNewTask(task)
+	} else {
+		fmt.Println("La tarea no puede estar vacía.")
+	}
+}
 
-	// Selección de comando
-	switch os.Args[1] {
-	case "add":
-		addTask := addCmd.String("task", "", "Nombre de la tarea a agregar")
-		addCmd.Parse(os.Args[2:])
-		if *addTask == "" {
-			fmt.Println("Debes especificar una tarea con -task")
-			os.Exit(1)
+func handleCompleteCommand() {
+	fmt.Print("Ingrese el ID de la tarea a completar: ")
+	id := selectTask()
+	completeTask(id)
+}
+
+func handleDeleteCommand() {
+	fmt.Print("Ingrese el ID de la tarea a eliminar: ")
+	id := selectTask()
+	deleteTask(id)
+}
+
+func selectTask() int {
+
+	selectedIndex := 0
+	tasks := loadTasks()
+	seleccionado, fin := false, false
+	for !fin {
+
+		// Limpiar la pantalla
+		screen.Clear()
+		screen.MoveTopLeft()
+
+		fmt.Println("\nSeleccione una opción:")
+		for i, task := range tasks {
+			var status string
+			if task.Completed {
+				status = "Completado"
+			} else {
+				status = "Pendiente"
+			}
+			if i == selectedIndex {
+				fmt.Printf("> %d. %s - %s\n", task.ID, task.Name, status)
+			} else {
+				fmt.Printf(" %d. %s - %s\n", task.ID, task.Name, status)
+			}
 		}
-		addNewTask(*addTask)
-	case "list":
-		listCmd.Parse(os.Args[2:])
-		showTaskList()
-	case "complete":
-		completeTaskID := completeCmd.Int("id", -1, "ID de la tarea a marcar como completada")
-		completeCmd.Parse(os.Args[2:])
-		if *completeTaskID == -1 {
-			fmt.Println("Debes especificar un ID de tarea con -id")
-			os.Exit(1)
+
+		// Capturar la tecla presionada
+		_, key, err := keyboard.GetSingleKey()
+		if err != nil {
+			panic(err)
 		}
-		completeTask(*completeTaskID)
-	case "delete":
-		deleteTaskID := deleteCmd.Int("id", -1, "ID de la tarea a eliminar")
-		deleteCmd.Parse(os.Args[2:])
-		if *deleteTaskID == -1 {
-			fmt.Println("Debes especificar un ID de tarea con -id")
-			os.Exit(1)
+
+		if key == keyboard.KeyEnter {
+
 		}
-		deleteTask(*deleteTaskID)
-	default:
-		fmt.Println("Comando no reconocido:", os.Args[1])
-		fmt.Println("Comandos disponibles: add, list, complete, delete")
-		os.Exit(1)
+		// Manejar la navegación
+		switch key {
+		case keyboard.KeyArrowUp:
+			selectedIndex = (selectedIndex - 1 + len(tasks)) % len(tasks)
+		case keyboard.KeyArrowDown:
+			selectedIndex = (selectedIndex + 1) % len(tasks)
+		case keyboard.KeyEnter:
+			seleccionado, fin = true, true
+		case keyboard.KeyEsc:
+			fin = true
+		}
+	}
+	if seleccionado {
+		return tasks[selectedIndex].ID
+	} else {
+		return 0
 	}
 }
 
@@ -173,6 +262,10 @@ func showTaskList() {
 
 // Marca una tarea como completada en base a su id
 func completeTask(taskID int) {
+
+	if taskID == 0 {
+		return
+	}
 	// Abrir el archivo CSV original
 	inputFile, err := os.Open(filePath)
 	if err != nil {
@@ -220,8 +313,9 @@ func completeTask(taskID int) {
 			} else {
 				fmt.Printf("La tarea %s con id %d ya se encuentra completada\n", record[1], taskID)
 			}
-			break
 		}
+
+		// fmt.Printf(" Se va a escribir %d. %s - %s\n", record[0], record[1], record[2])
 
 		// Escribir el registro (modificado o no) en el archivo temporal
 		if err := writer.Write(record); err != nil {
@@ -251,6 +345,11 @@ func completeTask(taskID int) {
 
 // Marca una tarea como completada en base a su id
 func deleteTask(taskID int) {
+
+	if taskID == 0 {
+		return
+	}
+
 	// Abrir el archivo CSV original
 	inputFile, err := os.Open(filePath)
 	if err != nil {
